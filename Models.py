@@ -69,7 +69,12 @@ class Site(Base):
     city = Column(String(64))
     state = Column(String(32))
     country = Column(String(64))
-    postcode = Column(String(16))
+    postcode = Column('zip', String(16))
 
-
-
+class SiteSubnet(Base):
+    __tablename__ = 'sitesubnet'
+    id = Column(Integer, primary_key=True)
+    siteid = Column('site', Integer, ForeignKey('site.id'))
+    site = relationship(Site, primaryjoin=siteid == Site.id)
+    subnetid = Column('subnet', Integer, ForeignKey('ipblock.id'))
+    subnet = relationship(IPBlock, primaryjoin=subnetid == IPBlock.id)
