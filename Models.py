@@ -1,6 +1,6 @@
 from Netdot import Base
 
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, Integer, String, ForeignKey, Text
 from sqlalchemy.orm import relationship, backref
 from netaddr import IPAddress, IPNetwork
 
@@ -13,6 +13,7 @@ class Entity(Base):
     asname = Column(String(32))
     asnumber = Column(Integer)
     oid = Column(String(32))
+    info = Column(Text)
 
     #ipblocks = relationship('IPBlock', backref=backref('IPBlock'))
     #ipblocks = relationship('IPBlock', foreign_keys='[IPBlock.owner]')
@@ -40,7 +41,7 @@ class IPBlock(Base):
 
     asn = Column(Integer)
     description = Column(String(128))
-    info = Column(String)
+    info = Column(Text)
 
     owner_id = Column('owner', Integer, ForeignKey('entity.id'))
     owner = relationship(Entity, primaryjoin=owner_id == Entity.id)
@@ -54,5 +55,21 @@ class IPBlock(Base):
     def __repr__(self):
         #self.network = IPNetwork('{}/{}'.format(IPAddress(int(self.address)), self.prefix))
         return self.cidr
+
+class Site(Base):
+    __tablename__ = 'site'
+    id = Column(Integer, primary_key=True)
+    siteid = Column('number', String(64))
+    aliases = Column(String(255))
+    info = Column(Text)
+
+    street1 = Column(String(128))
+    street2 = Column(String(128))
+    pobox = Column(String(32))
+    city = Column(String(64))
+    state = Column(String(32))
+    country = Column(String(64))
+    postcode = Column(String(16))
+
 
 
