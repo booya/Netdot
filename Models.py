@@ -38,7 +38,7 @@ class IPBlock(Base):
     status = Column(Integer, ForeignKey('ipblockstatus.id'))
     blocktype = relationship('IPBlockStatus', backref=backref('IPBlockStatus'))
 
-    asn = Column(Integer)
+    #asn = Column(Integer)
     description = Column(String(128))
     info = Column(Text)
 
