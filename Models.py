@@ -1,7 +1,7 @@
 from Netdot import Base
 
-from sqlalchemy import Column, Integer, String, ForeignKey, Text
-from sqlalchemy.orm import relationship, backref
+from sqlalchemy import Column, Integer, String, ForeignKey, Text, Table
+from sqlalchemy.orm import relationship, backref, reconstructor
 from netaddr import IPAddress, IPNetwork
 
 class Entity(Base):
@@ -33,7 +33,6 @@ class IPBlock(Base):
     __tablename__ = 'ipblock'
     id = Column(Integer, primary_key=True)
     address = Column(Integer)
-    description = Column(String(128))
     prefix = Column(Integer)
     version = Column(Integer)
     status = Column(Integer, ForeignKey('ipblockstatus.id'))
@@ -48,12 +47,28 @@ class IPBlock(Base):
     usedby_id = Column('used_by', Integer, ForeignKey('entity.id'))
     usedby = relationship(Entity, primaryjoin=usedby_id == Entity.id)
 
-    def __init__(self):
-        self.network = IPAddress(int(self.address))
+    # This doesn't get run when creating objects from the database.
+    # see init_on_load below.
+    def __init__(self, address, prefix, version, blocktype, asn, description,
+                info, owner, usedby):
+        print str(address)
+        self.network = IPAddress(int(address))
+        self.prefix = prefix
         self.cidr = IPNetwork('{}/{}'.format(self.network, self.prefix))
+        self.version = version
+        self.blocktype = blocktype
+        self.asn = asn
+        self.description = description
+        self.info = info
+        self.owner = owner.name
+        self.usedby = usedby.name
+
+    @reconstructor
+    def init_on_load(self):
+        self.network = IPAddress(int(self.address)).format()
+        self.cidr = '{}/{}'.format(self.network, self.prefix)
 
     def __repr__(self):
-        #self.network = IPNetwork('{}/{}'.format(IPAddress(int(self.address)), self.prefix))
         return self.cidr
 
 class Site(Base):
@@ -71,10 +86,15 @@ class Site(Base):
     country = Column(String(64))
     postcode = Column('zip', String(16))
 
-class SiteSubnet(Base):
-    __tablename__ = 'sitesubnet'
-    id = Column(Integer, primary_key=True)
-    siteid = Column('site', Integer, ForeignKey('site.id'))
-    site = relationship(Site, primaryjoin=siteid == Site.id)
-    subnetid = Column('subnet', Integer, ForeignKey('ipblock.id'))
-    subnet = relationship(IPBlock, primaryjoin=subnetid == IPBlock.id)
+    subnets = relationship(IPBlock, 
+                secondary='sitesubnet',
+                backref='sites') 
+
+    def __repr__(self):
+        return 'Site {}'.format(self.aliases)
+
+# Association Tables
+SiteSubnet = Table('sitesubnet', Base.metadata, 
+                Column('site', Integer, ForeignKey('site.id')),
+                Column('subnet', Integer, ForeignKey('ipblock.id')))
+
