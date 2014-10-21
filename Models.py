@@ -28,11 +28,13 @@ class Entity(Base):
                          secondary='entityrole',
                          backref='entities')
 
-    #roles_id = Column('roles', Integer, ForeignKey('roles.id'))
-    #roles = relationship(EntityRoles, primaryjoin=roles_id == EntityRoles.type)
-
     def __repr__(self):
         return self.name
+
+    def has_role(self, role):
+        for r in self.roles:
+            if r.name == role:
+                return True
 
 
 class IPBlockStatus(Base):
