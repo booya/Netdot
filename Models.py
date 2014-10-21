@@ -4,6 +4,15 @@ from sqlalchemy import Column, Integer, String, ForeignKey, Text, Table
 from sqlalchemy.orm import relationship, backref, reconstructor
 from netaddr import IPAddress, IPNetwork
 
+class EntityType(Base):
+    __tablename__ = 'entitytype'
+    id = Column(Integer, primary_key=True)
+    name = Column(String(64))
+
+    def __repr__(self):
+        return self.name
+
+
 class Entity(Base):
     __tablename__ = 'entity'
     id = Column(Integer, primary_key=True)
@@ -15,19 +24,25 @@ class Entity(Base):
     oid = Column(String(32))
     info = Column(Text)
 
-    #ipblocks = relationship('IPBlock', backref=backref('IPBlock'))
-    #ipblocks = relationship('IPBlock', foreign_keys='[IPBlock.owner]')
+    roles = relationship(EntityType,
+                         secondary='entityrole',
+                         backref='entities')
+
+    #roles_id = Column('roles', Integer, ForeignKey('roles.id'))
+    #roles = relationship(EntityRoles, primaryjoin=roles_id == EntityRoles.type)
 
     def __repr__(self):
         return self.name
+
 
 class IPBlockStatus(Base):
     __tablename__ = 'ipblockstatus'
     id = Column(Integer, primary_key=True)
     name = Column(String(64))
-    
+
     def __repr__(self):
         return self.name
+
 
 class IPBlock(Base):
     __tablename__ = 'ipblock'
@@ -38,7 +53,7 @@ class IPBlock(Base):
     status = Column(Integer, ForeignKey('ipblockstatus.id'))
     blocktype = relationship('IPBlockStatus', backref=backref('IPBlockStatus'))
 
-    #asn = Column(Integer)
+    # asn = Column(Integer)
     description = Column(String(128))
     info = Column(Text)
 
@@ -50,7 +65,7 @@ class IPBlock(Base):
     # This doesn't get run when creating objects from the database.
     # see init_on_load below.
     def __init__(self, address, prefix, version, blocktype, asn, description,
-                info, owner, usedby):
+                 info, owner, usedby):
         print str(address)
         self.network = IPAddress(int(address))
         self.prefix = prefix
@@ -71,6 +86,7 @@ class IPBlock(Base):
     def __repr__(self):
         return self.cidr
 
+
 class Site(Base):
     __tablename__ = 'site'
     id = Column(Integer, primary_key=True)
@@ -86,15 +102,18 @@ class Site(Base):
     country = Column(String(64))
     postcode = Column('zip', String(16))
 
-    subnets = relationship(IPBlock, 
-                secondary='sitesubnet',
-                backref='sites') 
+    subnets = relationship(IPBlock,
+                           secondary='sitesubnet',
+                           backref='sites')
 
     def __repr__(self):
         return 'Site {}'.format(self.aliases)
 
 # Association Tables
-SiteSubnet = Table('sitesubnet', Base.metadata, 
-                Column('site', Integer, ForeignKey('site.id')),
-                Column('subnet', Integer, ForeignKey('ipblock.id')))
+SiteSubnet = Table('sitesubnet', Base.metadata,
+                   Column('site', Integer, ForeignKey('site.id')),
+                   Column('subnet', Integer, ForeignKey('ipblock.id')))
 
+EntityRoles = Table('entityrole', Base.metadata,
+                    Column('entity', Integer, ForeignKey('entity.id')),
+                    Column('type', Integer, ForeignKey('entitytype.id')))
