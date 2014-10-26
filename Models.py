@@ -1,6 +1,6 @@
 from Netdot import Base
 
-from sqlalchemy import Column, Integer, String, ForeignKey, Text, Table
+from sqlalchemy import Column, Integer, String, ForeignKey, Text, Table, Boolean, DateTime
 from sqlalchemy.orm import relationship, backref, reconstructor
 from netaddr import IPAddress, IPNetwork
 
@@ -53,6 +53,8 @@ class IPBlock(Base):
     prefix = Column(Integer)
     version = Column(Integer)
     status = Column(Integer, ForeignKey('ipblockstatus.id'))
+    parent_id = Column('parent', Integer, ForeignKey('ipblock.id'))
+    parent = relationship('IPBlock', remote_side=[id])
     blocktype = relationship('IPBlockStatus', backref=backref('IPBlockStatus'))
 
     # asn = Column(Integer)
@@ -110,6 +112,103 @@ class Site(Base):
 
     def __repr__(self):
         return 'Site {}'.format(self.aliases)
+
+
+class Device(Base):
+    __tablename__ = 'device'
+    id = Column(Integer, primary_key=True)
+
+    aliases = Column(String(255))
+    sysname = Column(String(255))
+    sysdescription = Column(String(255))
+    syslocation = Column(String(255))
+    os = Column(String(128))
+    info = Column(Text)
+
+    # Management
+    customer_managed = Column(Boolean)
+    auto_dns = Column(Boolean)
+    canautoupdate = Column(Boolean)
+    date_installed = Column(DateTime)
+    last_updated = Column(DateTime)
+    oobname = Column(String(255))
+    oobnumber = Column(String(32))
+    oobname_2 = Column(String(255))
+    oobnumber_2 = Column(String(32))
+    power_outlet = Column(String(255))
+    power_outlet_2 = Column(String(255))
+    extension = Column(Integer)
+
+    # Monitoring
+    monitored = Column(Boolean)
+    monitoring_template = Column(String(255))
+    monitoring_path_cost = Column(Integer)
+    monitor_config = Column(Boolean)
+    monitor_config_group = Column(String(64))
+    down_from = Column(DateTime)
+    down_until = Column(DateTime)
+    monitorstatus = Column(Integer)
+
+    # Network related
+    layers = Column(String(8))
+    ipforwarding = Column(Boolean)
+    collect_arp = Column(Boolean)
+    collect_fwt = Column(Boolean)
+    collect_stp = Column(Boolean)
+    last_arp = Column(DateTime)
+    last_fwt = Column(DateTime)
+    bgpid = Column(String(64))
+    bgplocalas = Column(Integer)
+    stp_enabled = Column(Boolean)
+    stp_mst_digest = Column(String(255))
+    stp_mst_region = Column(String(128))
+    stp_mst_rev = Column(Integer)
+    stp_type = Column(String(128))
+
+    # SNMP
+    snmp_polling = Column(Boolean)
+    snmp_managed = Column(Boolean)
+    snmp_community = Column('community', String(64))
+    snmp_version = Column(Integer)
+    snmp_bulk = Column(Boolean)
+    snmp_conn_attempts = Column(Integer)
+    snmp_down = Column(Boolean)
+    snmp_target = Column(Integer)
+    snmp_authkey = Column(String(255))
+    snmp_authprotocol = Column(String(32))
+    snmp_privkey = Column(String(255))
+    snmp_privprotocol = Column(String(32))
+    snmp_securitylevel = Column(String(32))
+    snmp_securityname = Column(String(255))
+
+    # Foreign tables
+    site_id = Column('site', Integer, ForeignKey('site.id'))
+    site = relationship(Site, primaryjoin=site_id == Site.id)
+
+    owner_id = Column('owner', Integer, ForeignKey('entity.id'))
+    owner = relationship(Entity, primaryjoin=owner_id == Entity.id)
+
+    usedby_id = Column('used_by', Integer, ForeignKey('entity.id'))
+    user = relationship(Entity, primaryjoin=usedby_id == Entity.id)
+
+    host_device_id = Column('host_device', Integer, ForeignKey('device.id'))
+    host_device = relationship('Device', remote_side=[id])
+
+    name_id = Column('name', Integer)
+    # name = relationship()
+
+    #asset_id = Column(Integer)
+    #asset = relationship()
+    #type = router
+    #room
+    #rack
+
+    def __repr__(self):
+        return 'Device {}'.format(self.sysname)
+
+    def is_virtual(self):
+        if self.host_device_id:
+            return True
 
 # Association Tables
 SiteSubnet = Table('sitesubnet', Base.metadata,
