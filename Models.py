@@ -210,6 +210,60 @@ class Device(Base):
         if self.host_device_id:
             return True
 
+
+class Interface(Base):
+    __tablename__ = 'interface'
+    id = Column(Integer, primary_key=True)
+
+    admin_duplex = Column(String(16))
+    admin_status = Column(String(16))
+    auto_dns = Column(Boolean)
+    bpdu_filter_enabled = Column(Boolean)
+    bpdu_guard_enabled = Column(Boolean)
+    circuit = Column(Integer)
+    contactlist = Column(Integer)
+    description = Column(String(128))
+    dlci = Column(String(64))
+    doc_status = Column(String(32))
+    down_from = Column(DateTime)
+    down_until = Column(DateTime)
+    dp_remote_id = Column(String(128))
+    dp_remote_ip = Column(String(128))
+    dp_remote_port = Column(String(128))
+    dp_remote_type = Column(String(255))
+    ignore_ip = Column(Boolean)
+    info = Column(Text)
+    jack = Column(Integer)
+    jack_char = Column(String(32))
+    loop_guard_enabled = Column(Boolean)
+    monitored = Column(Boolean)
+    monitorstatus = Column(Integer)
+    name = Column(String(255))
+    neighbor_fixed = Column(Boolean)
+    neighbor_missed = Column(Integer)
+    number = Column(String(64))
+    oper_duplex = Column(String(16))
+    oper_status = Column(String(16))
+    overwrite_descr = Column(Boolean)
+    physaddr = Column(Integer)
+    room_char = Column(String(32))
+    root_guard_enabled = Column(Boolean)
+    snmp_managed = Column(Boolean)
+    speed = Column(Integer)
+    stp_id = Column(String(32))
+    type = Column(String(32))
+
+    # Foreign Associations
+    device_id = Column('device', Integer, ForeignKey('device.id'))
+    device = relationship(Device, primaryjoin=device_id == Device.id,
+                          backref='interfaces')
+
+    neighbor = Column(Integer)
+
+    def __repr__(self):
+        return self.name
+
+
 # Association Tables
 SiteSubnet = Table('sitesubnet', Base.metadata,
                    Column('site', Integer, ForeignKey('site.id')),
