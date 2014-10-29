@@ -49,22 +49,31 @@ class IPBlockStatus(Base):
 class IPBlock(Base):
     __tablename__ = 'ipblock'
     id = Column(Integer, primary_key=True)
+    description = Column(String(128))
+    info = Column(Text)
+    first_seen = Column(DateTime)
+    last_seen = Column(DateTime)
+    monitored = Column(Boolean)
+
+    status = Column(Integer, ForeignKey('ipblockstatus.id'))
+    blocktype = relationship('IPBlockStatus', backref=backref('IPBlockStatus'))
+    parent_id = Column('parent', Integer, ForeignKey('ipblock.id'))
+    parent = relationship('IPBlock', remote_side=[id])
+
     address = Column(Integer)
     prefix = Column(Integer)
     version = Column(Integer)
-    status = Column(Integer, ForeignKey('ipblockstatus.id'))
-    parent_id = Column('parent', Integer, ForeignKey('ipblock.id'))
-    parent = relationship('IPBlock', remote_side=[id])
-    blocktype = relationship('IPBlockStatus', backref=backref('IPBlockStatus'))
-
-    # asn = Column(Integer)
-    description = Column(String(128))
-    info = Column(Text)
+    #asn = Column(Integer)
+    #rir = Column(String(255))
+    use_network_broadcast = Column(Boolean)
 
     owner_id = Column('owner', Integer, ForeignKey('entity.id'))
-    owner = relationship(Entity, primaryjoin=owner_id == Entity.id)
+    owner = relationship(Entity, primaryjoin=owner_id == Entity.id,
+                         backref=backref('owned_ipblocks'))
     usedby_id = Column('used_by', Integer, ForeignKey('entity.id'))
-    usedby = relationship(Entity, primaryjoin=usedby_id == Entity.id)
+    usedby = relationship(Entity, primaryjoin=usedby_id == Entity.id,
+                          backref=backref('used_ipblocks'))
+    vlan_id = Column('vlan', Integer)
 
     # This doesn't get run when creating objects from the database.
     # see init_on_load below.
@@ -94,9 +103,11 @@ class IPBlock(Base):
 class Site(Base):
     __tablename__ = 'site'
     id = Column(Integer, primary_key=True)
+    name = Column(String(64))
     siteid = Column('number', String(64))
     aliases = Column(String(255))
     info = Column(Text)
+    gsf = Column(Integer)
 
     street1 = Column(String(128))
     street2 = Column(String(128))
@@ -110,8 +121,12 @@ class Site(Base):
                            secondary='sitesubnet',
                            backref='sites')
 
+    # unused relationships
+    availability_id = Column('availability', Integer)
+    contactlist_id = Column('contactlist', Integer)
+
     def __repr__(self):
-        return 'Site {}'.format(self.aliases)
+        return 'Site {} - {} - {}'.format(self.name, self.aliases, self.siteid)
 
 
 class Device(Base):
@@ -173,13 +188,14 @@ class Device(Base):
     snmp_bulk = Column(Boolean)
     snmp_conn_attempts = Column(Integer)
     snmp_down = Column(Boolean)
-    snmp_target = Column(Integer)
     snmp_authkey = Column(String(255))
     snmp_authprotocol = Column(String(32))
     snmp_privkey = Column(String(255))
     snmp_privprotocol = Column(String(32))
     snmp_securitylevel = Column(String(32))
     snmp_securityname = Column(String(255))
+    snmp_target_id = Column('snmp_target', Integer, ForeignKey('ipblock.id'))
+    snmp_target = relationship(IPBlock, primaryjoin=snmp_target_id == IPBlock.id)
 
     # Foreign tables
     site_id = Column('site', Integer, ForeignKey('site.id'))
@@ -210,7 +226,6 @@ class Device(Base):
         if self.host_device_id:
             return True
 
-
 class Interface(Base):
     __tablename__ = 'interface'
     id = Column(Integer, primary_key=True)
@@ -220,8 +235,6 @@ class Interface(Base):
     auto_dns = Column(Boolean)
     bpdu_filter_enabled = Column(Boolean)
     bpdu_guard_enabled = Column(Boolean)
-    circuit = Column(Integer)
-    contactlist = Column(Integer)
     description = Column(String(128))
     dlci = Column(String(64))
     doc_status = Column(String(32))
@@ -245,7 +258,6 @@ class Interface(Base):
     oper_duplex = Column(String(16))
     oper_status = Column(String(16))
     overwrite_descr = Column(Boolean)
-    physaddr = Column(Integer)
     room_char = Column(String(32))
     root_guard_enabled = Column(Boolean)
     snmp_managed = Column(Boolean)
@@ -258,7 +270,10 @@ class Interface(Base):
     device = relationship(Device, primaryjoin=device_id == Device.id,
                           backref='interfaces')
 
+    circuit = Column(Integer)
+    contactlist = Column(Integer)
     neighbor = Column(Integer)
+    physaddr = Column(Integer)
 
     def __repr__(self):
         return self.name
